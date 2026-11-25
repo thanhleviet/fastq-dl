@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- SRA metadata queries no longer fail when ENA is unreachable. pysradb's detailed search makes an internal ENA request only to fill the `ena_fastq_*` columns, which are not used; that request is now skipped and those columns are left empty
+
 ## [4.0.1] - 2026-05-15
 
 ### Fixed

@@ -4,6 +4,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import requests
 
 from fastq_dl.constants import SRA_DOWNLOAD_FAILED, SRA_FAILED
 from fastq_dl.providers.sra import get_sra_metadata, sra_download
@@ -58,6 +59,30 @@ class TestGetSraMetadata:
 
         assert success is False
         assert data == []
+
+    @patch("fastq_dl.providers.sra.SRAweb")
+    def test_skips_pysradb_ena_lookup(self, mock_sraweb_class):
+        """Test that the SRA query succeeds when pysradb's ENA lookup would fail."""
+        mock_db = MagicMock()
+        mock_sraweb_class.return_value = mock_db
+        ena_fastq = mock_db.fetch_ena_fastq
+        ena_fastq.side_effect = requests.exceptions.ConnectionError(
+            "Connection reset by peer"
+        )
+        ena_lookups = []
+
+        def search_sra(*args, **kwargs):
+            ena_lookups.append(mock_db.fetch_ena_fastq("SRP123456"))
+            return pd.DataFrame({"run_accession": ["SRR123456"]})
+
+        mock_db.search_sra.side_effect = search_sra
+
+        success, data = get_sra_metadata("SRR123456", max_attempts=1)
+
+        assert success is True
+        assert data[0]["run_accession"] == "SRR123456"
+        assert ena_lookups[0].empty
+        ena_fastq.assert_not_called()
 
 
 class TestSraDownload:

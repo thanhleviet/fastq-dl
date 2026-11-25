@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Union
 
 import certifi
+import pandas as pd
 from pysradb import SRAweb
 
 from fastq_dl.constants import (
@@ -34,6 +35,8 @@ def get_sra_metadata(query: str, max_attempts: int = 3, sleep: int = 10) -> list
     for attempt in range(1, max_attempts + 1):
         try:
             db = SRAweb()
+            # pysradb's ENA lookup only fills ena_fastq_* columns, which are not used here
+            db.fetch_ena_fastq = lambda srp: pd.DataFrame()
             df = db.search_sra(
                 query,
                 detailed=True,
